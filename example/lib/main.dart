@@ -76,12 +76,23 @@ class _ExampleScreenState extends State<ExampleScreen> {
         data: items,
         isLoading: isLoading,
         hasMore: hasMore,
-        headerTitle: 'Items List',
         onLoadMore: _loadMore,
         onRefresh: _onRefresh,
+        header: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            'Items List',
+            style: Theme.of(context).textTheme.headline6,
+          ),
+        ),
         itemBuilder: (context, item, index) => ListTile(
           title: Text(item),
           subtitle: Text('Index: $index'),
+        ),
+        centerLoadingView: const Center(child: CircularProgressIndicator()),
+        bottomLoadingIndicator: const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
       ),
     );

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 // Type definitions
-typedef ItemBuilder<T> = Widget Function(
-    BuildContext context, T item, int index);
+typedef ItemBuilder<T> = Widget Function(BuildContext context, T item, int index);
 typedef OnLoadMore = Future<void> Function();
 typedef OnRefresh = Future<void> Function();
 
@@ -13,7 +12,7 @@ class FlashList<T> extends StatefulWidget {
     required this.itemBuilder,
     this.onLoadMore,
     this.onRefresh,
-    this.headerTitle,
+    this.header,
     this.loadingIndicator,
     this.emptyWidget,
     this.headerStyle,
@@ -23,6 +22,8 @@ class FlashList<T> extends StatefulWidget {
     this.loadMoreThreshold = 200,
     this.itemHeight,
     this.padding = const EdgeInsets.all(0),
+    this.centerLoadingView,
+    this.bottomLoadingIndicator,
   }) : super(key: key);
 
   /// The data to be displayed in the list
@@ -37,8 +38,8 @@ class FlashList<T> extends StatefulWidget {
   /// Callback function when refresh is triggered
   final OnRefresh? onRefresh;
 
-  /// Optional header title for the list
-  final String? headerTitle;
+  /// Optional header widget for the list
+  final Widget? header;
 
   /// Custom loading indicator widget
   final Widget? loadingIndicator;
@@ -46,7 +47,7 @@ class FlashList<T> extends StatefulWidget {
   /// Widget to show when the list is empty
   final Widget? emptyWidget;
 
-  /// Style for the header title
+  /// Style for the header title (only applicable if header is a text widget)
   final TextStyle? headerStyle;
 
   /// Loading state of the list
@@ -67,12 +68,19 @@ class FlashList<T> extends StatefulWidget {
   /// Padding for the list
   final EdgeInsetsGeometry padding;
 
+  /// Custom center loading view when data is empty
+  final Widget? centerLoadingView;
+
+  /// Custom bottom loading indicator when loading more items
+  final Widget? bottomLoadingIndicator;
+
   @override
   State<FlashList<T>> createState() => _FlashListState<T>();
 }
 
 class _FlashListState<T> extends State<FlashList<T>> {
   late ScrollController _scrollController;
+  bool _isFetchingMore = false;
 
   @override
   void initState() {
@@ -90,14 +98,19 @@ class _FlashListState<T> extends State<FlashList<T>> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    
+    if (!_scrollController.hasClients || _isFetchingMore) return;
+
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.offset;
-    
+
     if (currentScroll >= (maxScroll - widget.loadMoreThreshold)) {
       if (!widget.isLoading && widget.hasMore && widget.onLoadMore != null) {
-        widget.onLoadMore!();
+        _isFetchingMore = true;
+        widget.onLoadMore!().then((_) {
+          setState(() {
+            _isFetchingMore = false;
+          });
+        });
       }
     }
   }
@@ -105,65 +118,45 @@ class _FlashListState<T> extends State<FlashList<T>> {
   @override
   Widget build(BuildContext context) {
     if (widget.isLoading && widget.data.isEmpty) {
-      return Center(
-        child: widget.loadingIndicator ?? const CircularProgressIndicator(),
-      );
+      return Center(child: widget.centerLoadingView ?? const CircularProgressIndicator());
     }
 
     if (!widget.isLoading && widget.data.isEmpty) {
-      return widget.emptyWidget ?? const Center(child: Text('No items'));
-    }
-
-    Widget listView = ListView.builder(
-      controller: _scrollController,
-      padding: widget.padding,
-      itemCount: widget.data.length + (widget.headerTitle != null ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (widget.headerTitle != null && index == 0) {
-          return Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              widget.headerTitle!,
-              style: widget.headerStyle ?? Theme.of(context).textTheme.titleLarge,
-            ),
-          );
-        }
-
-        final itemIndex = widget.headerTitle != null ? index - 1 : index;
-        return widget.itemBuilder(
-          context,
-          widget.data[itemIndex],
-          itemIndex,
-        );
-      },
-    );
-
-    if (widget.onRefresh != null) {
-      listView = RefreshIndicator(
-        onRefresh: widget.onRefresh!,
-        child: listView,
-      );
+      return widget.emptyWidget ?? const Center(child: Text('No data found'));
     }
 
     return Stack(
       children: [
-        listView,
-        if (widget.isLoading && widget.data.isNotEmpty)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(8.0),
-              alignment: Alignment.center,
-              child: widget.loadingIndicator ?? 
-                const SizedBox(
-                  height: 24,
-                  width: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-            ),
+        RefreshIndicator(
+          onRefresh: widget.onRefresh ?? () async {},
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: widget.padding,
+            itemCount: widget.data.length + (widget.header != null ? 2 : 1), // +1 for bottom loader
+            itemBuilder: (context, index) {
+              if (widget.header != null && index == 0) {
+                return widget.header!;
+              }
+
+              final itemIndex = widget.header != null ? index - 1 : index;
+
+              // Bottom loading indicator
+              if (itemIndex == widget.data.length) {
+                return widget.hasMore
+                    ? Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Center(
+                          child: widget.bottomLoadingIndicator ??
+                              const CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : const SizedBox.shrink();
+              }
+
+              return widget.itemBuilder(context, widget.data[itemIndex], itemIndex);
+            },
           ),
+        ),
       ],
     );
   }
