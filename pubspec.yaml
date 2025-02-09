@@ -1,7 +1,9 @@
 name: flash_list
 description: A high-performance Flutter ListView widget with pagination, pull-to-refresh, and header features inspired by React Native's FlashList.
 version: 0.0.1
-homepage: https://github.com/yourusername/flash_list
+homepage: https://github.com/Ashik55/flash_list
+repository: https://github.com/Ashik55/flash_list
+issue_tracker: https://github.com/Ashik55/flash_list/issues
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
