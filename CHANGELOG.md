@@ -1,10 +1,17 @@
-## 0.0.1
+---
 
-- Initial release of FlashList
-- Features include:
-  - Infinite scrolling with load more functionality
-  - Pull-to-refresh support
-  - Optional header title
-  - Loading indicators
-  - Empty state handling
-  - Custom scroll controller support
+### ✅ **Updated `CHANGELOG.md`**
+
+```markdown
+# CHANGELOG
+
+## 0.0.2
+
+- Initial release
+- ✅ Pull-to-refresh support
+- ✅ Infinite scrolling with load more
+- ✅ Header support (accepts any widget)
+- ✅ Loading indicators (center & bottom)
+- ✅ Empty state handling
+- ✅ Performance optimizations
+```
